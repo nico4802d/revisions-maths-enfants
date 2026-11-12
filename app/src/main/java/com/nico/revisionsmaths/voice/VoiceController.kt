@@ -33,6 +33,8 @@ class VoiceController(private val context: Context) {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500)
         }
         recognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
@@ -70,7 +72,7 @@ class VoiceController(private val context: Context) {
     companion object {
         const val ERROR_RECOGNITION_UNAVAILABLE = -1
 
-        val TRANSIENT_ERRORS: Set<Int> = setOf(5, 6, 7, 11)
+        val TRANSIENT_ERRORS: Set<Int> = setOf(1, 2, 5, 6, 7, 11)
 
         fun friendlyMessage(errorCode: Int): String = when (errorCode) {
             ERROR_RECOGNITION_UNAVAILABLE ->

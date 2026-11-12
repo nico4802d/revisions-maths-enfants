@@ -279,10 +279,20 @@ private fun QuizContent(
 
             when {
                 state.isSpeaking -> Text("🔊 L'assistant parle…", fontWeight = FontWeight.Medium)
+                state.isListening && state.micRetry -> Text(
+                    "🔄 Le micro redémarre, dis ta réponse !",
+                    fontWeight = FontWeight.Bold,
+                    color = Orange
+                )
                 state.isListening -> Text(
                     "🎙️ Je t'écoute, dis ta réponse !",
                     fontWeight = FontWeight.Bold,
                     color = Purple
+                )
+                state.micRetry -> Text(
+                    "🔄 Redémarrage du micro…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Orange
                 )
             }
 

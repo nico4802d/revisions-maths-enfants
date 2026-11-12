@@ -51,10 +51,10 @@ L'IA ne fait qu'animer la conversation à partir du verdict transmis dans le pr�
 
 ## Build de l'APK
 
-### Via GitHub Actions (recommandé)
-1. Poussez le code ou lancez `Build APK` depuis l'onglet **Actions** du dépôt.
-2. À la fin du workflow, téléchargez l'artifact `revisions-maths-debug-apk`.
-3. Le fichier `app-debug.apk` est installable directement sur le téléphone
+### Via GitHub Releases (recommandé)
+1. Poussez le code : le workflow « Build APK » compile et publie automatiquement l'APK.
+2. Onglet **Releases** du dépôt → release **APK debug (dernier build)** → `app-debug.apk`.
+3. Le fichier est installable directement sur le téléphone
    (autoriser « Installer des applications inconnues » dans les réglages Android).
 
 ### En local

@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,8 +31,12 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --no-daemon
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: revisions-maths-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Publish APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create latest-debug --prerelease \
+            --title "APK debug (dernier build)" \
+            --notes "APK debug généré automatiquement par le dernier push. À installer directement sur le téléphone (autoriser les sources inconnues)." \
+            || true
+          gh release upload latest-debug app/build/outputs/apk/debug/app-debug.apk --clobber

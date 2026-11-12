@@ -44,7 +44,8 @@ data class QuizUiState(
     val error: String? = null,
     val xpGained: Int = 0,
     val finished: Boolean = false,
-    val timeLeft: Int? = null
+    val timeLeft: Int? = null,
+    val micRetry: Boolean = false
 )
 
 class QuizViewModel(
@@ -140,6 +141,7 @@ class QuizViewModel(
         voiceController.startListening(
             onResult = { transcript ->
                 sttRetries = 0
+                _state.update { it.copy(micRetry = false) }
                 handleTranscript(transcript ?: "")
             },
             onError = { errorCode -> handleSttError(errorCode) }
@@ -149,12 +151,14 @@ class QuizViewModel(
     private fun handleSttError(errorCode: Int) {
         if (errorCode in VoiceController.TRANSIENT_ERRORS && sttRetries < MAX_STT_RETRIES) {
             sttRetries++
-            _state.update { it.copy(isListening = false) }
+            _state.update { it.copy(isListening = false, micRetry = true) }
             viewModelScope.launch {
-                delay(400)
-                if (_state.value.phase == QuizPhase.LISTENING && _state.value.timeLeft != null) {
+                delay(STT_RETRY_DELAY_MS)
+                if (_state.value.phase == QuizPhase.LISTENING) {
                     _state.update { it.copy(isListening = true) }
                     startListeningForAnswer()
+                } else {
+                    _state.update { it.copy(micRetry = false) }
                 }
             }
         } else {
@@ -162,6 +166,7 @@ class QuizViewModel(
             _state.update {
                 it.copy(
                     isListening = false,
+                    micRetry = false,
                     phase = QuizPhase.CHECKING,
                     error = "🎙️ ${VoiceController.friendlyMessage(errorCode)} " +
                         "Écris ta réponse ou appuie sur Parler pour réessayer."
@@ -353,7 +358,8 @@ class QuizViewModel(
     }
 
     companion object {
-        const val MAX_STT_RETRIES = 2
+        const val MAX_STT_RETRIES = 3
+        const val STT_RETRY_DELAY_MS = 800L
     }
 }
 
