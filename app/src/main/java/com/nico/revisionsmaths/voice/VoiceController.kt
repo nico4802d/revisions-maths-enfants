@@ -19,6 +19,7 @@ class VoiceController(private val context: Context) {
 
     private var recognizer: SpeechRecognizer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var sessionId = 0
 
     val isAvailable: Boolean
         get() = SpeechRecognizer.isRecognitionAvailable(context)
@@ -43,19 +44,28 @@ class VoiceController(private val context: Context) {
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500)
         }
         val newRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+        val id = sessionId
         newRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onResults(results: Bundle) {
-                val text = results
+                if (id != sessionId) return
+                val list = results
                     .getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    ?.firstOrNull()
+                    ?.filterNot { it.isNullOrBlank() }
+                    .orEmpty()
+                if (list.isEmpty()) {
+                    destroyInternal()
+                    onError(7)
+                    return
+                }
                 destroyInternal()
-                onResult(text)
+                onResult(list.first())
             }
 
             override fun onError(error: Int) {
+                if (id != sessionId) return
                 destroyInternal()
                 onError(error)
             }
@@ -82,6 +92,7 @@ class VoiceController(private val context: Context) {
     }
 
     private fun destroyInternal() {
+        sessionId++
         recognizer?.let { r ->
             runCatching { r.cancel() }
             runCatching { r.destroy() }

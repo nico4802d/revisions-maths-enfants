@@ -188,6 +188,10 @@ class QuizViewModel(
     }
 
     private fun handleTranscript(transcript: String) {
+        if (transcript.isBlank()) {
+            handleSttError(7)
+            return
+        }
         cancelAnswerTimer()
         resetMicState()
         _state.update { it.copy(isListening = false, transcript = transcript, phase = QuizPhase.CHECKING) }
