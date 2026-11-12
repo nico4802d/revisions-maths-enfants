@@ -234,6 +234,15 @@ private fun QuizContent(
                 }
             }
 
+            OutlinedButton(
+                onClick = onRepeat,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange)
+            ) {
+                Icon(Icons.Default.Replay, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("🔊 Répéter la question")
+            }
+
             state.assistantMessage?.let { message ->
                 Text(
                     message,
@@ -306,16 +315,6 @@ private fun QuizContent(
                 ) {
                     Text("OK", fontWeight = FontWeight.Bold)
                 }
-            }
-
-            OutlinedButton(
-                onClick = onRepeat,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Replay, contentDescription = null)
-                Spacer(Modifier.width(4.dp))
-                Text("🔊 Répéter la question")
             }
 
             Spacer(Modifier.height(24.dp))
