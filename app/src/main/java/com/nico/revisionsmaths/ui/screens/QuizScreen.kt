@@ -14,16 +14,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,8 +36,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,12 +49,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -63,6 +68,12 @@ import com.nico.revisionsmaths.ui.quiz.QuizPhase
 import com.nico.revisionsmaths.ui.quiz.QuizUiState
 import com.nico.revisionsmaths.ui.quiz.QuizViewModel
 import com.nico.revisionsmaths.ui.quiz.QuizViewModelFactory
+import com.nico.revisionsmaths.ui.theme.Green
+import com.nico.revisionsmaths.ui.theme.Orange
+import com.nico.revisionsmaths.ui.theme.Pink
+import com.nico.revisionsmaths.ui.theme.Purple
+import com.nico.revisionsmaths.ui.theme.PurpleLight
+import com.nico.revisionsmaths.ui.theme.Red
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -139,14 +150,20 @@ private fun QuizContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Quiz — $profileName") },
+                title = { Text("🎯 Quiz — $profileName") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quitter")
                     }
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -162,38 +179,65 @@ private fun QuizContent(
             ) {
                 Text(
                     "Question ${state.questionIndex + 1} / ${state.questionCount}",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "Score : ${state.score}",
+                    "⭐ Score : ${state.score}",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Pink,
+                    fontWeight = FontWeight.Bold
                 )
             }
             LinearProgressIndicator(
                 progress = { state.questionIndex.toFloat() / state.questionCount.coerceAtLeast(1) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                color = Purple,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
 
             state.question?.let { question ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(listOf(Purple, PurpleLight)),
+                            RoundedCornerShape(24.dp)
+                        )
+                        .padding(vertical = 36.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Text(
+                        "${question.text} = ?",
+                        fontSize = 52.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = Color.White
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                state.timeLeft?.let { seconds ->
+                    Surface(
+                        shape = CircleShape,
+                        color = when {
+                            seconds <= 3 -> Red
+                            seconds <= 6 -> Orange
+                            else -> Green
+                        }
                     ) {
                         Text(
-                            "${question.text} = ?",
-                            fontSize = 52.sp,
+                            "⏳ $seconds s",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 }
@@ -211,9 +255,9 @@ private fun QuizContent(
                                 false -> Color(0xFFFFF3E0)
                                 null -> MaterialTheme.colorScheme.surfaceVariant
                             },
-                            RoundedCornerShape(12.dp)
+                            RoundedCornerShape(16.dp)
                         )
-                        .padding(12.dp)
+                        .padding(14.dp)
                 )
             }
 
@@ -234,27 +278,39 @@ private fun QuizContent(
             }
 
             when {
-                state.isSpeaking -> Text("🔊 L'assistant parle…")
-                state.isListening -> Text("🎙️ Je t'écoute, dis ta réponse !")
+                state.isSpeaking -> Text("🔊 L'assistant parle…", fontWeight = FontWeight.Medium)
+                state.isListening -> Text(
+                    "🎙️ Je t'écoute, dis ta réponse !",
+                    fontWeight = FontWeight.Bold,
+                    color = Purple
+                )
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(onClick = onRepeat, modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = onRepeat,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange),
+                    modifier = Modifier.weight(1f)
+                ) {
                     Icon(Icons.Default.Replay, contentDescription = null)
-                    Spacer(Modifier.padding(2.dp))
+                    Spacer(Modifier.width(4.dp))
                     Text("Répéter")
                 }
                 Button(
                     onClick = onVoiceAnswer,
                     enabled = !state.isSpeaking &&
                         state.phase in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Pink,
+                        contentColor = Color.White
+                    ),
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Mic, contentDescription = null)
-                    Spacer(Modifier.padding(2.dp))
+                    Spacer(Modifier.width(4.dp))
                     Text("Parler")
                 }
             }
@@ -278,9 +334,13 @@ private fun QuizContent(
                         manualInput = ""
                     },
                     enabled = manualInput.isNotBlank() &&
-                        state.phase in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING)
+                        state.phase in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Green,
+                        contentColor = Color.White
+                    )
                 ) {
-                    Text("OK")
+                    Text("OK", fontWeight = FontWeight.Bold)
                 }
             }
 

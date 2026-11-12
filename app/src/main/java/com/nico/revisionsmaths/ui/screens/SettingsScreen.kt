@@ -1,5 +1,6 @@
 package com.nico.revisionsmaths.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,21 +22,28 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.nico.revisionsmaths.RevisionsApp
 import com.nico.revisionsmaths.data.AiProvider
+import com.nico.revisionsmaths.data.SettingsStore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,18 +53,27 @@ fun SettingsScreen(navController: NavHostController) {
     var provider by remember { mutableStateOf(container.settings.aiProvider) }
     var apiKey by remember { mutableStateOf(container.settings.apiKey ?: "") }
     var saved by remember { mutableStateOf(false) }
+    var timeLimit by remember {
+        mutableFloatStateOf(container.settings.answerTimeLimit.toFloat())
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Réglages") },
+                title = { Text("⚙️ Réglages") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -65,8 +83,59 @@ fun SettingsScreen(navController: NavHostController) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        MaterialTheme.colorScheme.tertiaryContainer,
+                        RoundedCornerShape(16.dp)
+                    )
+                    .padding(16.dp)
+            ) {
+                Text(
+                    "⏳ Temps de réponse",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Temps limite pour répondre à chaque question.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "${timeLimit.toInt()} secondes",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontWeight = FontWeight.Bold
+                )
+                Slider(
+                    value = timeLimit,
+                    onValueChange = { timeLimit = it },
+                    onValueChangeFinished = {
+                        container.settings.answerTimeLimit = timeLimit.toInt()
+                    },
+                    valueRange = 5f..60f,
+                    steps = 54,
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.tertiary,
+                        activeTrackColor = MaterialTheme.colorScheme.tertiary
+                    )
+                )
+                Text(
+                    "Réglage appliqué immédiatement (5 à 60 secondes).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             Column {
-                Text("Assistant IA (optionnel)", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "🤖 Assistant IA (optionnel)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Sans clé API, l'application fonctionne en mode vocal complet avec la " +

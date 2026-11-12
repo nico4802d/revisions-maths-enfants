@@ -20,6 +20,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,7 +57,15 @@ fun ResultsScreen(navController: NavHostController, profileId: Long) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Résultats") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("🏆 Résultats") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = androidx.compose.ui.graphics.Color.White
+                )
+            )
+        }
     ) { padding ->
         val loaded = data
         if (loaded == null) {

@@ -41,4 +41,7 @@ object AssistantPrompts {
 
     val notUnderstoodFallback: String =
         "Je n'ai pas bien entendu. Répète ta réponse à voix haute ou écris-la."
+
+    val timeoutFeedback: String =
+        "Oups, le temps est écoulé ! On passe à la question suivante, tu vas y arriver !"
 }

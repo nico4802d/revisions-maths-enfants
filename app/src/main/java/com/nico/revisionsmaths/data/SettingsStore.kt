@@ -46,8 +46,16 @@ class SettingsStore(context: Context) {
             prefs.edit().putString(KEY_PROVIDER, value.name).apply()
         }
 
+    var answerTimeLimit: Int
+        get() = prefs.getInt(KEY_TIME_LIMIT, DEFAULT_TIME_LIMIT).coerceIn(5, 60)
+        set(value) {
+            prefs.edit().putInt(KEY_TIME_LIMIT, value.coerceIn(5, 60)).apply()
+        }
+
     companion object {
         private const val KEY_API = "ai_api_key"
         private const val KEY_PROVIDER = "ai_provider"
+        private const val KEY_TIME_LIMIT = "answer_time_limit"
+        const val DEFAULT_TIME_LIMIT = 10
     }
 }
