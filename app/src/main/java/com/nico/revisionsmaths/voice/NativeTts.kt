@@ -49,6 +49,10 @@ class NativeTts(context: Context) : TextToSpeech.OnInitListener {
                 override fun onError(utteranceId: String?) {
                     if (continuation.isActive) continuation.resume(Unit)
                 }
+
+                override fun onStop(utteranceId: String?, interrupted: Boolean) {
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
             })
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle(), utteranceId)
         }
@@ -57,5 +61,9 @@ class NativeTts(context: Context) : TextToSpeech.OnInitListener {
     fun shutdown() {
         engine?.shutdown()
         engine = null
+    }
+
+    fun stopSpeaking() {
+        engine?.stop()
     }
 }

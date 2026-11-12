@@ -133,7 +133,7 @@ private fun QuizContent(
     val answerFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(state.phase, state.questionIndex) {
-        if (state.phase == QuizPhase.ANSWERING) {
+        if (state.phase in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING)) {
             answerFocusRequester.requestFocus()
         }
     }
@@ -280,7 +280,9 @@ private fun QuizContent(
                     ),
                     keyboardActions = KeyboardActions(
                         onDone = {
-                            if (manualInput.isNotBlank() && state.phase == QuizPhase.ANSWERING) {
+                            if (manualInput.isNotBlank() &&
+                                state.phase in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING)
+                            ) {
                                 onManualAnswer(manualInput)
                                 manualInput = ""
                             }
@@ -295,7 +297,8 @@ private fun QuizContent(
                         onManualAnswer(manualInput)
                         manualInput = ""
                     },
-                    enabled = manualInput.isNotBlank() && state.phase == QuizPhase.ANSWERING,
+                    enabled = manualInput.isNotBlank() &&
+                        state.phase in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Green,
                         contentColor = Color.White

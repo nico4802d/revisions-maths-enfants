@@ -110,13 +110,18 @@ class QuizViewModel(
     }
 
     fun submitManualAnswer(input: String) {
-        if (_state.value.phase != QuizPhase.ANSWERING) return
+        val current = _state.value
+        if (current.phase !in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING)) return
         val parsed = FrenchNumberParser.parse(input)
         if (parsed == null) {
             _state.update { it.copy(error = "Écris un nombre s'il te plaît 😊") }
             return
         }
         cancelAnswerTimer()
+        if (current.isSpeaking) {
+            nativeTts.stopSpeaking()
+            audioPlayer.stop()
+        }
         pipelineJob?.cancel()
         pipelineJob = viewModelScope.launch { evaluate(parsed) }
     }
