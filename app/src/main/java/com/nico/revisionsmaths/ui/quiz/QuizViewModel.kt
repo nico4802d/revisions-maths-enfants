@@ -1,9 +1,6 @@
 package com.nico.revisionsmaths.ui.quiz
 
-import android.Manifest
 import android.app.Application
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -19,7 +16,6 @@ import com.nico.revisionsmaths.data.model.QuizConfig
 import com.nico.revisionsmaths.voice.AssistantPrompts
 import com.nico.revisionsmaths.voice.AudioPlayer
 import com.nico.revisionsmaths.voice.NativeTts
-import com.nico.revisionsmaths.voice.VoiceController
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,26 +24,27 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class QuizPhase { ASKING, LISTENING, CHECKING, FEEDBACK, FINISHED }
+enum class QuizPhase { ASKING, ANSWERING, FEEDBACK, FINISHED }
 
 data class QuizUiState(
     val phase: QuizPhase = QuizPhase.ASKING,
     val questionIndex: Int = 0,
     val questionCount: Int = 0,
     val question: Question? = null,
-    val transcript: String? = null,
     val lastCorrect: Boolean? = null,
     val score: Int = 0,
     val assistantMessage: String? = null,
     val isSpeaking: Boolean = false,
-    val isListening: Boolean = false,
     val error: String? = null,
     val xpGained: Int = 0,
     val finished: Boolean = false,
-    val timeLeft: Int? = null,
-    val micRetry: Boolean = false
+    val timeLeft: Int? = null
 )
 
+/**
+ * Version 1 : les questions et les feedbacks sont lus à voix haute (TTS),
+ * les réponses sont saisies au clavier (activé par défaut).
+ */
 class QuizViewModel(
     application: Application,
     private val profile: Profile,
@@ -55,7 +52,6 @@ class QuizViewModel(
 ) : AndroidViewModel(application) {
 
     private val container = (application as RevisionsApp).container
-    private val voiceController = VoiceController(application)
     private val nativeTts = NativeTts(application)
     private val audioPlayer = AudioPlayer()
 
@@ -67,8 +63,6 @@ class QuizViewModel(
     private var startTime = 0L
     private var pipelineJob: Job? = null
     private var timerJob: Job? = null
-    private var sttRetryJob: Job? = null
-    private var micFailures = 0
 
     init {
         start()
@@ -80,21 +74,13 @@ class QuizViewModel(
         askCurrent()
     }
 
-    private fun resetMicState() {
-        sttRetryJob?.cancel()
-        sttRetryJob = null
-        micFailures = 0
-    }
-
     private fun askCurrent() {
         val index = _state.value.questionIndex
         val question = questions.getOrNull(index) ?: return finishQuiz()
-        resetMicState()
         pipelineJob = viewModelScope.launch {
             _state.update {
                 it.copy(
                     question = question,
-                    transcript = null,
                     lastCorrect = null,
                     assistantMessage = null,
                     error = null,
@@ -104,9 +90,8 @@ class QuizViewModel(
                 )
             }
             speak(AssistantPrompts.spokenQuestion(question, index, questions.size))
-            _state.update { it.copy(isSpeaking = false, phase = QuizPhase.LISTENING, isListening = true) }
+            _state.update { it.copy(isSpeaking = false, phase = QuizPhase.ANSWERING) }
             startAnswerTimer()
-            startListeningForAnswer()
         }
     }
 
@@ -116,104 +101,24 @@ class QuizViewModel(
         if (_state.value.phase == QuizPhase.FINISHED) return
         pipelineJob?.cancel()
         cancelAnswerTimer()
-        resetMicState()
-        voiceController.stopListening()
         pipelineJob = viewModelScope.launch {
-            _state.update { it.copy(isSpeaking = true, isListening = false, error = null) }
+            _state.update { it.copy(isSpeaking = true, error = null) }
             speak(AssistantPrompts.spokenQuestion(question, index, questions.size))
-            _state.update { it.copy(isSpeaking = false, phase = QuizPhase.LISTENING, isListening = true) }
+            _state.update { it.copy(isSpeaking = false, phase = QuizPhase.ANSWERING) }
             startAnswerTimer()
-            startListeningForAnswer()
-        }
-    }
-
-    fun startVoiceAnswer() {
-        val current = _state.value
-        if (current.phase !in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING)) return
-        if (current.isSpeaking) return
-        resetMicState()
-        if (current.timeLeft == null) startAnswerTimer()
-        _state.update { it.copy(phase = QuizPhase.LISTENING, isListening = true, error = null, micRetry = false) }
-        startListeningForAnswer()
-    }
-
-    private fun startListeningForAnswer() {
-        if (!hasMicPermission()) {
-            _state.update {
-                it.copy(
-                    isListening = false,
-                    phase = QuizPhase.CHECKING,
-                    error = "Autorise le micro pour répondre à la voix, ou écris ta réponse."
-                )
-            }
-            return
-        }
-        voiceController.startListening(
-            onResult = { transcript ->
-                resetMicState()
-                _state.update { it.copy(micRetry = false) }
-                handleTranscript(transcript ?: "")
-            },
-            onError = { errorCode -> handleSttError(errorCode) }
-        )
-    }
-
-    private fun handleSttError(errorCode: Int) {
-        sttRetryJob?.cancel()
-        sttRetryJob = null
-        val transient = errorCode in VoiceController.TRANSIENT_ERRORS
-        if (transient && micFailures < MAX_MIC_FAILURES) {
-            micFailures++
-            _state.update { it.copy(isListening = false, micRetry = true, error = null) }
-            sttRetryJob = viewModelScope.launch {
-                delay(STT_RETRY_DELAY_MS)
-                if (_state.value.phase == QuizPhase.LISTENING && _state.value.timeLeft != null) {
-                    _state.update { it.copy(isListening = true) }
-                    startListeningForAnswer()
-                } else {
-                    _state.update { it.copy(micRetry = false) }
-                }
-            }
-        } else {
-            _state.update {
-                it.copy(
-                    isListening = false,
-                    micRetry = false,
-                    phase = QuizPhase.CHECKING,
-                    error = "🎙️ ${VoiceController.friendlyMessage(errorCode)} " +
-                        "Écris ta réponse ou appuie sur Parler pour réessayer."
-                )
-            }
-        }
-    }
-
-    private fun handleTranscript(transcript: String) {
-        if (transcript.isBlank()) {
-            handleSttError(7)
-            return
-        }
-        cancelAnswerTimer()
-        resetMicState()
-        _state.update { it.copy(isListening = false, transcript = transcript, phase = QuizPhase.CHECKING) }
-        val parsed = FrenchNumberParser.parse(transcript)
-        if (parsed == null) {
-            pipelineJob = viewModelScope.launch { evaluateNotUnderstood(transcript) }
-        } else {
-            pipelineJob?.cancel()
-            pipelineJob = viewModelScope.launch { evaluate(parsed, transcript) }
         }
     }
 
     fun submitManualAnswer(input: String) {
-        val current = _state.value
-        if (current.phase !in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING)) return
-        val parsed = FrenchNumberParser.parse(input) ?: return
+        if (_state.value.phase != QuizPhase.ANSWERING) return
+        val parsed = FrenchNumberParser.parse(input)
+        if (parsed == null) {
+            _state.update { it.copy(error = "Écris un nombre s'il te plaît 😊") }
+            return
+        }
         cancelAnswerTimer()
-        resetMicState()
-        voiceController.stopListening()
-        _state.update { it.copy(isListening = false) }
         pipelineJob?.cancel()
-        pipelineJob = viewModelScope.launch { evaluate(parsed, input) }
+        pipelineJob = viewModelScope.launch { evaluate(parsed) }
     }
 
     private fun startAnswerTimer() {
@@ -240,37 +145,21 @@ class QuizViewModel(
     }
 
     private fun onAnswerTimeout() {
-        if (_state.value.phase !in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING)) return
-        resetMicState()
-        voiceController.stopListening()
+        if (_state.value.phase != QuizPhase.ANSWERING) return
         pipelineJob?.cancel()
         pipelineJob = viewModelScope.launch {
             val question = _state.value.question ?: return@launch
             answers.add(question.op to false)
-            _state.update {
-                it.copy(
-                    lastCorrect = false,
-                    transcript = null,
-                    isListening = false,
-                    timeLeft = null,
-                    phase = QuizPhase.FEEDBACK
-                )
-            }
+            _state.update { it.copy(lastCorrect = false, timeLeft = null, phase = QuizPhase.FEEDBACK) }
             val message = AssistantPrompts.timeoutFeedback
             _state.update { it.copy(assistantMessage = message, isSpeaking = true) }
             speak(message)
             _state.update { it.copy(isSpeaking = false) }
-            if (_state.value.questionIndex + 1 < questions.size) {
-                delay(800)
-                _state.update { it.copy(questionIndex = it.questionIndex + 1) }
-                askCurrent()
-            } else {
-                finishQuiz()
-            }
+            nextQuestion()
         }
     }
 
-    private suspend fun evaluate(value: Int, transcript: String) {
+    private suspend fun evaluate(value: Int) {
         val question = _state.value.question ?: return
         val isCorrect = value == question.answer
         answers.add(question.op to isCorrect)
@@ -278,13 +167,18 @@ class QuizViewModel(
             it.copy(
                 lastCorrect = isCorrect,
                 score = if (isCorrect) it.score + 1 else it.score,
+                error = null,
                 phase = QuizPhase.FEEDBACK
             )
         }
-        val feedback = assistantFeedback(question, transcript, isCorrect)
+        val feedback = assistantFeedback(question, isCorrect)
         _state.update { it.copy(assistantMessage = feedback, isSpeaking = true) }
         speak(feedback)
         _state.update { it.copy(isSpeaking = false) }
+        nextQuestion()
+    }
+
+    private suspend fun nextQuestion() {
         if (_state.value.questionIndex + 1 < questions.size) {
             delay(800)
             _state.update { it.copy(questionIndex = it.questionIndex + 1) }
@@ -294,27 +188,11 @@ class QuizViewModel(
         }
     }
 
-    private suspend fun evaluateNotUnderstood(transcript: String) {
-        val question = _state.value.question ?: return
-        val message = if (container.aiClient.isConfigured) {
-            container.aiClient.chat(
-                AssistantPrompts.notUnderstoodPrompt(profile.age, question),
-                transcript
-            ) ?: AssistantPrompts.notUnderstoodFallback
-        } else {
-            AssistantPrompts.notUnderstoodFallback
-        }
-        _state.update { it.copy(assistantMessage = message, isSpeaking = true, phase = QuizPhase.CHECKING) }
-        speak(message)
-        _state.update { it.copy(isSpeaking = false) }
-        if (_state.value.timeLeft == null) startAnswerTimer()
-    }
-
-    private suspend fun assistantFeedback(question: Question, transcript: String, isCorrect: Boolean): String {
+    private suspend fun assistantFeedback(question: Question, isCorrect: Boolean): String {
         if (container.aiClient.isConfigured) {
             val reply = container.aiClient.chat(
-                AssistantPrompts.systemPrompt(profile.age, question, transcript, isCorrect),
-                transcript
+                AssistantPrompts.systemPromptTyped(profile.age, question, isCorrect),
+                if (isCorrect) "L'enfant a donné la bonne réponse." else "L'enfant a donné une mauvaise réponse."
             )
             if (!reply.isNullOrBlank()) return reply
         }
@@ -357,28 +235,17 @@ class QuizViewModel(
                 )
             )
             _state.update {
-                it.copy(phase = QuizPhase.FINISHED, finished = true, xpGained = xpGained, isListening = false)
+                it.copy(phase = QuizPhase.FINISHED, finished = true, xpGained = xpGained)
             }
         }
     }
 
-    private fun hasMicPermission(): Boolean = ContextCompat.checkSelfPermission(
-        getApplication(),
-        Manifest.permission.RECORD_AUDIO
-    ) == PackageManager.PERMISSION_GRANTED
-
     override fun onCleared() {
         pipelineJob?.cancel()
         timerJob?.cancel()
-        voiceController.stopListening()
         nativeTts.shutdown()
         audioPlayer.stop()
         super.onCleared()
-    }
-
-    companion object {
-        const val MAX_MIC_FAILURES = 3
-        const val STT_RETRY_DELAY_MS = 800L
     }
 }
 

@@ -15,8 +15,9 @@ sans aucune clé API.
    et XP visibles par profil.
 2. **Configuration du quiz** : type d'opération (addition / multiplication / **mixte**),
    nombre de questions (5, 10, 15, 20), difficulté adaptée à l'âge affichée.
-3. **Quiz** : question posée à voix haute ; l'enfant répond **à voix haute** ; une
-   **saisie tactile est toujours visible** en parallèle.
+3. **Quiz** : question posée à voix haute ; l'enfant répond **au clavier**
+   (activé par défaut) ; l'assistant lit le feedback (encouragement ou
+   correction) à voix haute.
 4. **Résultats** : score, XP gagnés, progression de niveau.
 5. **Historique** : mémoire des scores des derniers quiz, par profil.
 6. **Réglages** : fournisseur IA (OpenAI ou Mistral AI) et clé API (chiffrée sur
@@ -37,13 +38,18 @@ sans aucune clé API.
 - 8 ans : additions jusqu'à 100, tables 2-9
 - ≥ 9 ans : additions à deux chiffres, tables 2-10
 
-## 5. Assistant vocal (conversation complète)
+## 5. Assistant vocal (v1 : questions et feedbacks oraux, réponse au clavier)
 
 Pipeline par question :
 1. **TTS** : question posée à voix haute (TTS OpenAI si configuré, sinon TTS natif Android).
-2. **STT** : réponse de l'enfant captée par SpeechRecognizer natif Android (français).
+2. **Saisie clavier** : le clavier s'ouvre automatiquement dès la fin de la question ;
+   temps de réponse limité (réglable, défaut 10 s).
 3. **Vérification locale** : comparaison avec la réponse pré-calculée ; un parseur de
-   nombres français rend la transcription robuste. **L'IA ne juge jamais.**
+   nombres français accepte aussi les nombres en lettres. **L'IA ne juge jamais.**
+
+> Décision v1 : la capture de la réponse au micro (SpeechRecognizer) a été retirée —
+> trop instable sur certains appareils (Samsung A54 notamment). Elle pourra être
+> réintroduite dans une version ultérieure.
 4. **Pré-prompt système à chaque requête IA** : rôle bienveillant, âge, opération en
    cours avec réponse correcte (usage d'évaluation uniquement), verdict officiel
    (CORRECT / INCORRECT / INCOMPRIS), règles strictes : jamais donner la réponse,

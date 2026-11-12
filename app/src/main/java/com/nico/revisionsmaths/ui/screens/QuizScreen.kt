@@ -1,9 +1,5 @@
 package com.nico.revisionsmaths.ui.screens
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +43,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -57,7 +53,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.nico.revisionsmaths.RevisionsApp
@@ -92,17 +87,6 @@ fun QuizScreen(
         profile = withContext(Dispatchers.IO) { app.container.database.profileDao().getById(profileId) }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { }
-
-    LaunchedEffect(Unit) {
-        val granted = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-    }
-
     val currentProfile = profile
     if (currentProfile == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -130,7 +114,6 @@ fun QuizScreen(
         profileName = currentProfile.name,
         onBack = { navController.popBackStack() },
         onRepeat = viewModel::repeatQuestion,
-        onVoiceAnswer = viewModel::startVoiceAnswer,
         onManualAnswer = viewModel::submitManualAnswer
     )
 }
@@ -142,10 +125,16 @@ private fun QuizContent(
     profileName: String,
     onBack: () -> Unit,
     onRepeat: () -> Unit,
-    onVoiceAnswer: () -> Unit,
     onManualAnswer: (String) -> Unit
 ) {
     var manualInput by remember { mutableStateOf("") }
+    val answerFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(state.phase, state.questionIndex) {
+        if (state.phase == QuizPhase.ANSWERING) {
+            answerFocusRequester.requestFocus()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -261,14 +250,6 @@ private fun QuizContent(
                 )
             }
 
-            state.transcript?.let { transcript ->
-                Text(
-                    "Tu as dit : « $transcript »",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
             state.error?.let { error ->
                 Text(
                     error,
@@ -277,52 +258,8 @@ private fun QuizContent(
                 )
             }
 
-            when {
-                state.isSpeaking -> Text("🔊 L'assistant parle…", fontWeight = FontWeight.Medium)
-                state.isListening && state.micRetry -> Text(
-                    "🔄 Le micro redémarre, dis ta réponse !",
-                    fontWeight = FontWeight.Bold,
-                    color = Orange
-                )
-                state.isListening -> Text(
-                    "🎙️ Je t'écoute, dis ta réponse !",
-                    fontWeight = FontWeight.Bold,
-                    color = Purple
-                )
-                state.micRetry -> Text(
-                    "🔄 Redémarrage du micro…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Orange
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onRepeat,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Replay, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Répéter")
-                }
-                Button(
-                    onClick = onVoiceAnswer,
-                    enabled = !state.isSpeaking &&
-                        state.phase in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Pink,
-                        contentColor = Color.White
-                    ),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Mic, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Parler")
-                }
+            if (state.isSpeaking) {
+                Text("🔊 L'assistant parle…", fontWeight = FontWeight.Medium)
             }
 
             Row(
@@ -333,18 +270,19 @@ private fun QuizContent(
                 OutlinedTextField(
                     value = manualInput,
                     onValueChange = { manualInput = it },
-                    label = { Text("Ou écris ta réponse") },
+                    label = { Text("Ta réponse") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(answerFocusRequester)
                 )
                 Button(
                     onClick = {
                         onManualAnswer(manualInput)
                         manualInput = ""
                     },
-                    enabled = manualInput.isNotBlank() &&
-                        state.phase in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING),
+                    enabled = manualInput.isNotBlank() && state.phase == QuizPhase.ANSWERING,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Green,
                         contentColor = Color.White
@@ -352,6 +290,16 @@ private fun QuizContent(
                 ) {
                     Text("OK", fontWeight = FontWeight.Bold)
                 }
+            }
+
+            OutlinedButton(
+                onClick = onRepeat,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Replay, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("🔊 Répéter la question")
             }
 
             Spacer(Modifier.height(24.dp))
