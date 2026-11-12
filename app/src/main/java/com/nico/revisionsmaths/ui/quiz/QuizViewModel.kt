@@ -67,7 +67,8 @@ class QuizViewModel(
     private var startTime = 0L
     private var pipelineJob: Job? = null
     private var timerJob: Job? = null
-    private var sttRetries = 0
+    private var sttRetryJob: Job? = null
+    private var micFailures = 0
 
     init {
         start()
@@ -79,9 +80,16 @@ class QuizViewModel(
         askCurrent()
     }
 
+    private fun resetMicState() {
+        sttRetryJob?.cancel()
+        sttRetryJob = null
+        micFailures = 0
+    }
+
     private fun askCurrent() {
         val index = _state.value.questionIndex
         val question = questions.getOrNull(index) ?: return finishQuiz()
+        resetMicState()
         pipelineJob = viewModelScope.launch {
             _state.update {
                 it.copy(
@@ -108,6 +116,7 @@ class QuizViewModel(
         if (_state.value.phase == QuizPhase.FINISHED) return
         pipelineJob?.cancel()
         cancelAnswerTimer()
+        resetMicState()
         voiceController.stopListening()
         pipelineJob = viewModelScope.launch {
             _state.update { it.copy(isSpeaking = true, isListening = false, error = null) }
@@ -122,8 +131,9 @@ class QuizViewModel(
         val current = _state.value
         if (current.phase !in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING)) return
         if (current.isSpeaking) return
+        resetMicState()
         if (current.timeLeft == null) startAnswerTimer()
-        _state.update { it.copy(phase = QuizPhase.LISTENING, isListening = true, error = null) }
+        _state.update { it.copy(phase = QuizPhase.LISTENING, isListening = true, error = null, micRetry = false) }
         startListeningForAnswer()
     }
 
@@ -140,7 +150,7 @@ class QuizViewModel(
         }
         voiceController.startListening(
             onResult = { transcript ->
-                sttRetries = 0
+                resetMicState()
                 _state.update { it.copy(micRetry = false) }
                 handleTranscript(transcript ?: "")
             },
@@ -149,12 +159,15 @@ class QuizViewModel(
     }
 
     private fun handleSttError(errorCode: Int) {
-        if (errorCode in VoiceController.TRANSIENT_ERRORS && sttRetries < MAX_STT_RETRIES) {
-            sttRetries++
-            _state.update { it.copy(isListening = false, micRetry = true) }
-            viewModelScope.launch {
+        sttRetryJob?.cancel()
+        sttRetryJob = null
+        val transient = errorCode in VoiceController.TRANSIENT_ERRORS
+        if (transient && micFailures < MAX_MIC_FAILURES) {
+            micFailures++
+            _state.update { it.copy(isListening = false, micRetry = true, error = null) }
+            sttRetryJob = viewModelScope.launch {
                 delay(STT_RETRY_DELAY_MS)
-                if (_state.value.phase == QuizPhase.LISTENING) {
+                if (_state.value.phase == QuizPhase.LISTENING && _state.value.timeLeft != null) {
                     _state.update { it.copy(isListening = true) }
                     startListeningForAnswer()
                 } else {
@@ -162,7 +175,6 @@ class QuizViewModel(
                 }
             }
         } else {
-            sttRetries = 0
             _state.update {
                 it.copy(
                     isListening = false,
@@ -177,6 +189,7 @@ class QuizViewModel(
 
     private fun handleTranscript(transcript: String) {
         cancelAnswerTimer()
+        resetMicState()
         _state.update { it.copy(isListening = false, transcript = transcript, phase = QuizPhase.CHECKING) }
         val parsed = FrenchNumberParser.parse(transcript)
         if (parsed == null) {
@@ -192,6 +205,7 @@ class QuizViewModel(
         if (current.phase !in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING)) return
         val parsed = FrenchNumberParser.parse(input) ?: return
         cancelAnswerTimer()
+        resetMicState()
         voiceController.stopListening()
         _state.update { it.copy(isListening = false) }
         pipelineJob?.cancel()
@@ -223,6 +237,7 @@ class QuizViewModel(
 
     private fun onAnswerTimeout() {
         if (_state.value.phase !in listOf(QuizPhase.LISTENING, QuizPhase.CHECKING)) return
+        resetMicState()
         voiceController.stopListening()
         pipelineJob?.cancel()
         pipelineJob = viewModelScope.launch {
@@ -358,7 +373,7 @@ class QuizViewModel(
     }
 
     companion object {
-        const val MAX_STT_RETRIES = 3
+        const val MAX_MIC_FAILURES = 3
         const val STT_RETRY_DELAY_MS = 800L
     }
 }
