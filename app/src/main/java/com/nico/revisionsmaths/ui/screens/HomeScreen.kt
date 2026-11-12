@@ -101,6 +101,7 @@ fun HomeScreen(navController: NavHostController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileCard(
     profile: Profile,

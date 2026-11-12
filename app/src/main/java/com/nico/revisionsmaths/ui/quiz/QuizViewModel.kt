@@ -229,9 +229,13 @@ class QuizViewModel(
     private fun finishQuiz() {
         pipelineJob = viewModelScope.launch {
             val current = _state.value
-            val xpGained = answers.sumOf { (op, correct) ->
-                if (correct) if (op == Operation.MULTIPLICATION) 10 else 5 else 0
-            }
+            val xpGained = answers.mapNotNull { (op, correct) ->
+                if (correct) {
+                    if (op == Operation.MULTIPLICATION) 10 else 5
+                } else {
+                    null
+                }
+            }.sum()
             val durationSeconds = ((System.currentTimeMillis() - startTime) / 1000).toInt()
             container.database.profileDao().update(profile.copy(xp = profile.xp + xpGained))
             container.database.quizResultDao().insert(
