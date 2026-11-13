@@ -38,7 +38,8 @@ data class QuizUiState(
     val error: String? = null,
     val xpGained: Int = 0,
     val finished: Boolean = false,
-    val timeLeft: Int? = null
+    val timeLeft: Int? = null,
+    val paused: Boolean = false
 )
 
 /**
@@ -101,6 +102,7 @@ class QuizViewModel(
         val index = _state.value.questionIndex
         val question = _state.value.question ?: return
         if (_state.value.phase == QuizPhase.FINISHED) return
+        if (_state.value.paused) return
         pipelineJob?.cancel()
         cancelAnswerTimer()
         pipelineJob = viewModelScope.launch {
@@ -111,8 +113,36 @@ class QuizViewModel(
         }
     }
 
+    fun pause() {
+        if (_state.value.phase == QuizPhase.FINISHED) return
+        pipelineJob?.cancel()
+        timerJob?.cancel()
+        timerJob = null
+        nativeTts.stopSpeaking()
+        audioPlayer.stop()
+        _state.update { it.copy(isSpeaking = false, paused = true) }
+    }
+
+    fun resume() {
+        val current = _state.value
+        if (!current.paused) return
+        _state.update { it.copy(paused = false) }
+        when (current.phase) {
+            QuizPhase.ASKING -> askCurrent()
+            QuizPhase.ANSWERING -> startAnswerTimer(
+                current.timeLeft ?: container.settings.answerTimeLimit
+            )
+            QuizPhase.FEEDBACK -> {
+                pipelineJob = viewModelScope.launch { nextQuestion() }
+            }
+            QuizPhase.FINISHED -> {
+            }
+        }
+    }
+
     fun submitManualAnswer(input: String) {
         val current = _state.value
+        if (current.paused) return
         if (current.phase !in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING)) return
         val parsed = FrenchNumberParser.parse(input)
         if (parsed == null) {
@@ -128,9 +158,9 @@ class QuizViewModel(
         pipelineJob = viewModelScope.launch { evaluate(parsed) }
     }
 
-    private fun startAnswerTimer() {
+    private fun startAnswerTimer(initialSeconds: Int? = null) {
         timerJob?.cancel()
-        val limit = container.settings.answerTimeLimit
+        val limit = initialSeconds ?: container.settings.answerTimeLimit
         _state.update { it.copy(timeLeft = limit) }
         timerJob = viewModelScope.launch {
             while (true) {

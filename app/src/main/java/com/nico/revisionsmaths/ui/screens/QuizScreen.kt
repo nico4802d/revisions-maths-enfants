@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -49,12 +50,15 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.nico.revisionsmaths.RevisionsApp
@@ -103,6 +107,17 @@ fun QuizScreen(
     )
     val state by viewModel.state.collectAsState()
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                viewModel.pause()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     LaunchedEffect(state.finished) {
         if (state.finished) {
             navController.navigate(Routes.results(currentProfile.id)) {
@@ -116,7 +131,8 @@ fun QuizScreen(
         profileName = currentProfile.name,
         onBack = { navController.popBackStack() },
         onRepeat = viewModel::repeatQuestion,
-        onManualAnswer = viewModel::submitManualAnswer
+        onManualAnswer = viewModel::submitManualAnswer,
+        onResume = viewModel::resume
     )
 }
 
@@ -127,13 +143,14 @@ private fun QuizContent(
     profileName: String,
     onBack: () -> Unit,
     onRepeat: () -> Unit,
-    onManualAnswer: (String) -> Unit
+    onManualAnswer: (String) -> Unit,
+    onResume: () -> Unit
 ) {
     var manualInput by remember { mutableStateOf("") }
     val answerFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(state.phase, state.questionIndex) {
-        if (state.phase in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING)) {
+        if (!state.paused && state.phase in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING)) {
             answerFocusRequester.requestFocus()
         }
     }
@@ -166,6 +183,7 @@ private fun QuizContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .padding(horizontal = 14.dp, vertical = 10.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -193,6 +211,36 @@ private fun QuizContent(
                 color = Purple,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
+
+            if (state.paused) {
+                Surface(
+                    color = Orange,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "⏸️ Quiz en pause",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Button(
+                            onClick = onResume,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Green,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("▶️ Reprendre")
+                        }
+                    }
+                }
+            }
 
             state.question?.let { question ->
                 Box(
@@ -295,7 +343,7 @@ private fun QuizContent(
                     ),
                     keyboardActions = KeyboardActions(
                         onDone = {
-                            if (manualInput.isNotBlank() &&
+                            if (manualInput.isNotBlank() && !state.paused &&
                                 state.phase in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING)
                             ) {
                                 onManualAnswer(manualInput)
@@ -312,7 +360,7 @@ private fun QuizContent(
                         onManualAnswer(manualInput)
                         manualInput = ""
                     },
-                    enabled = manualInput.isNotBlank() &&
+                    enabled = manualInput.isNotBlank() && !state.paused &&
                         state.phase in listOf(QuizPhase.ASKING, QuizPhase.ANSWERING),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Green,
