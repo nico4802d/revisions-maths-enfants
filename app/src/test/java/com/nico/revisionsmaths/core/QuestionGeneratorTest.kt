@@ -132,4 +132,33 @@ class QuestionGeneratorTest {
         assertEquals(5, QuestionGenerator.generate(7, OperationType.ADDITION, 5).size)
         assertEquals(20, QuestionGenerator.generate(7, OperationType.MULTIPLICATION, 20).size)
     }
+
+    @Test
+    fun `pas de question en double dans un quiz standard`() {
+        repeat(20) {
+            val questions = QuestionGenerator.generate(8, OperationType.MIXED, 20)
+            assertEquals(20, questions.size)
+            val keys = questions.map { "${it.a}|${it.b}|${it.op.name}" }
+            assertEquals(keys.size, keys.toSet().size)
+        }
+    }
+
+    @Test
+    fun `inversions autorisees mais pas de doublon exact en mode mixte`() {
+        val questions = QuestionGenerator.generate(9, OperationType.MIXED, 20)
+        val direct = questions.count { it.op == Operation.MULTIPLICATION && it.a == 8 && it.b == 9 }
+        val inverse = questions.count { it.op == Operation.MULTIPLICATION && it.a == 9 && it.b == 8 }
+        assertTrue(direct <= 1)
+        assertTrue(inverse <= 1)
+    }
+
+    @Test
+    fun `table fixe sans doublon tant que la table le permet`() {
+        val fixed = FixedTable(Operation.MULTIPLICATION, 8)
+        val questions = QuestionGenerator.generateForTable(fixed, 10)
+        assertEquals(10, questions.map { it.b }.toSet().size)
+        val longQuiz = QuestionGenerator.generateForTable(fixed, 15)
+        assertEquals(10, longQuiz.take(10).map { it.b }.toSet().size)
+        assertEquals(15, longQuiz.size)
+    }
 }

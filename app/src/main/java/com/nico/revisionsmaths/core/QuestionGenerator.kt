@@ -8,20 +8,36 @@ import kotlin.random.Random
 
 object QuestionGenerator {
 
+    private const val MAX_UNIQUE_ATTEMPTS = 50
+
     fun generate(
         age: Int,
         type: OperationType,
         count: Int,
         rng: Random = Random.Default
-    ): List<Question> = List(count) {
-        val op = when (type) {
-            OperationType.ADDITION -> Operation.ADDITION
-            OperationType.MULTIPLICATION -> Operation.MULTIPLICATION
-            OperationType.MIXED ->
-                if (rng.nextBoolean()) Operation.ADDITION else Operation.MULTIPLICATION
+    ): List<Question> {
+        val seen = mutableSetOf<String>()
+        val questions = mutableListOf<Question>()
+        while (questions.size < count) {
+            val op = when (type) {
+                OperationType.ADDITION -> Operation.ADDITION
+                OperationType.MULTIPLICATION -> Operation.MULTIPLICATION
+                OperationType.MIXED ->
+                    if (rng.nextBoolean()) Operation.ADDITION else Operation.MULTIPLICATION
+            }
+            var question = generateQuestion(age, op, rng)
+            var attempts = 0
+            while (question.key() in seen && attempts < MAX_UNIQUE_ATTEMPTS) {
+                question = generateQuestion(age, op, rng)
+                attempts++
+            }
+            seen.add(question.key())
+            questions.add(question)
         }
-        generateQuestion(age, op, rng)
+        return questions
     }
+
+    private fun Question.key(): String = "$a|$b|${op.name}"
 
     fun generateQuestion(age: Int, op: Operation, rng: Random = Random.Default): Question = when {
         age <= 6 -> when (op) {
@@ -78,7 +94,20 @@ object QuestionGenerator {
         fixedTable: FixedTable,
         count: Int,
         rng: Random = Random.Default
-    ): List<Question> = List(count) { questionForTable(fixedTable, rng) }
+    ): List<Question> {
+        val pool = (1..10).shuffled(rng).toMutableList()
+        return List(count) {
+            if (pool.isEmpty()) {
+                pool.addAll((1..10).shuffled(rng))
+            }
+            val b = pool.removeAt(0)
+            val a = fixedTable.table
+            when (fixedTable.op) {
+                Operation.MULTIPLICATION -> Question(a, b, fixedTable.op, a * b)
+                Operation.ADDITION -> Question(a, b, fixedTable.op, a + b)
+            }
+        }
+    }
 
     fun questionForTable(fixedTable: FixedTable, rng: Random = Random.Default): Question {
         val a = fixedTable.table

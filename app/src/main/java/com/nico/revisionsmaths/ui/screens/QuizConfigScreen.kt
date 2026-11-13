@@ -139,7 +139,7 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                     }
                     Spacer(Modifier.height(8.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             TABLES.subList(0, 6).forEach { table ->
                                 FilterChip(
                                     selected = fixedTable?.table == table,
@@ -156,11 +156,11 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                         )
                                     },
-                                    modifier = Modifier.width(52.dp)
+                                    modifier = Modifier.width(44.dp)
                                 )
                             }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             TABLES.subList(6, 12).forEach { table ->
                                 FilterChip(
                                     selected = fixedTable?.table == table,
@@ -177,7 +177,7 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                         )
                                     },
-                                    modifier = Modifier.width(52.dp)
+                                    modifier = Modifier.width(44.dp)
                                 )
                             }
                         }
