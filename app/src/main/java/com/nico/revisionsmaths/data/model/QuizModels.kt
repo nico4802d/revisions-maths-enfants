@@ -35,7 +35,7 @@ data class FixedTable(val op: Operation, val table: Int) {
                 else -> return null
             }
             val table = value.drop(1).toIntOrNull() ?: return null
-            if (table < 1 || table > 10) return null
+            if (table < 1 || table > 12) return null
             return FixedTable(op, table)
         }
     }

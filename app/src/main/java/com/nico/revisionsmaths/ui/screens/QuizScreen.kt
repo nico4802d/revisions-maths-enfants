@@ -138,6 +138,12 @@ private fun QuizContent(
         }
     }
 
+    LaunchedEffect(state.phase, state.questionIndex) {
+        if (state.phase == QuizPhase.FEEDBACK && manualInput.isNotBlank()) {
+            manualInput = ""
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -160,9 +166,9 @@ private fun QuizContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(20.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -194,14 +200,14 @@ private fun QuizContent(
                         .fillMaxWidth()
                         .background(
                             Brush.horizontalGradient(listOf(Purple, PurpleLight)),
-                            RoundedCornerShape(24.dp)
+                            RoundedCornerShape(20.dp)
                         )
-                        .padding(vertical = 36.dp),
+                        .padding(vertical = 20.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         "${question.text} = ?",
-                        fontSize = 52.sp,
+                        fontSize = 40.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         color = Color.White
@@ -225,10 +231,10 @@ private fun QuizContent(
                     ) {
                         Text(
                             "⏳ $seconds s",
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
@@ -255,9 +261,9 @@ private fun QuizContent(
                                 false -> Color(0xFFFFF3E0)
                                 null -> MaterialTheme.colorScheme.surfaceVariant
                             },
-                            RoundedCornerShape(16.dp)
+                            RoundedCornerShape(12.dp)
                         )
-                        .padding(14.dp)
+                        .padding(10.dp)
                 )
             }
 
@@ -317,7 +323,7 @@ private fun QuizContent(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
         }
     }
 }

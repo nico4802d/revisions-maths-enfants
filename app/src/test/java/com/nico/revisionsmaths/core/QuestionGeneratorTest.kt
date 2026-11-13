@@ -75,6 +75,18 @@ class QuestionGeneratorTest {
         assertEquals(null, FixedTable.decode("-"))
         assertEquals(null, FixedTable.decode(null))
         assertEquals(null, FixedTable.decode("M99"))
+        assertEquals(FixedTable(Operation.MULTIPLICATION, 12), FixedTable.decode("M12"))
+    }
+
+    @Test
+    fun `table fixe de multiplication des 12 reste dans la table des 12`() {
+        val fixed = FixedTable(Operation.MULTIPLICATION, 12)
+        repeat(50) {
+            val q = QuestionGenerator.questionForTable(fixed)
+            assertEquals(12, q.a)
+            assertTrue(q.b in 1..10)
+            assertEquals(q.a * q.b, q.answer)
+        }
     }
 
     @Test

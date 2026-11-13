@@ -46,7 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private val QUESTION_COUNTS = listOf(5, 10, 15, 20)
-private val TABLES = (1..10).toList()
+private val TABLES = (1..12).toList()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,7 +139,7 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                     Spacer(Modifier.height(8.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TABLES.subList(0, 5).forEach { table ->
+                            TABLES.subList(0, 6).forEach { table ->
                                 FilterChip(
                                     selected = fixedTable?.table == table,
                                     onClick = {
@@ -153,7 +153,7 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TABLES.subList(5, 10).forEach { table ->
+                            TABLES.subList(6, 12).forEach { table ->
                                 FilterChip(
                                     selected = fixedTable?.table == table,
                                     onClick = {
