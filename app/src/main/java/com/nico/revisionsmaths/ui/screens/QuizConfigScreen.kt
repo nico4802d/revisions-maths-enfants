@@ -137,18 +137,34 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                         )
                     }
                     Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        TABLES.forEach { table ->
-                            FilterChip(
-                                selected = fixedTable?.table == table,
-                                onClick = {
-                                    fixedTable = FixedTable(
-                                        fixedTable?.op ?: Operation.MULTIPLICATION,
-                                        table
-                                    )
-                                },
-                                label = { Text("$table") }
-                            )
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TABLES.subList(0, 5).forEach { table ->
+                                FilterChip(
+                                    selected = fixedTable?.table == table,
+                                    onClick = {
+                                        fixedTable = FixedTable(
+                                            fixedTable?.op ?: Operation.MULTIPLICATION,
+                                            table
+                                        )
+                                    },
+                                    label = { Text("$table") }
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TABLES.subList(5, 10).forEach { table ->
+                                FilterChip(
+                                    selected = fixedTable?.table == table,
+                                    onClick = {
+                                        fixedTable = FixedTable(
+                                            fixedTable?.op ?: Operation.MULTIPLICATION,
+                                            table
+                                        )
+                                    },
+                                    label = { Text("$table") }
+                                )
+                            }
                         }
                     }
                     if (fixedTable != null) {
