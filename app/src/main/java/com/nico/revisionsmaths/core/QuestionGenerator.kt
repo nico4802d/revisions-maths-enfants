@@ -1,5 +1,6 @@
 package com.nico.revisionsmaths.core
 
+import com.nico.revisionsmaths.data.model.FixedTable
 import com.nico.revisionsmaths.data.model.Operation
 import com.nico.revisionsmaths.data.model.OperationType
 import com.nico.revisionsmaths.data.model.Question
@@ -37,8 +38,8 @@ object QuestionGenerator {
         }
         age == 7 -> when (op) {
             Operation.ADDITION -> {
-                val a = rng.nextInt(0, 21)
-                val b = rng.nextInt(0, 21 - a)
+                val a = rng.nextInt(1, 20)
+                val b = rng.nextInt(1, 21 - a)
                 Question(a, b, op, a + b)
             }
             Operation.MULTIPLICATION -> {
@@ -70,6 +71,21 @@ object QuestionGenerator {
                 val b = rng.nextInt(2, 11)
                 Question(a, b, op, a * b)
             }
+        }
+    }
+
+    fun generateForTable(
+        fixedTable: FixedTable,
+        count: Int,
+        rng: Random = Random.Default
+    ): List<Question> = List(count) { questionForTable(fixedTable, rng) }
+
+    fun questionForTable(fixedTable: FixedTable, rng: Random = Random.Default): Question {
+        val a = fixedTable.table
+        val b = rng.nextInt(1, 11)
+        return when (fixedTable.op) {
+            Operation.MULTIPLICATION -> Question(a, b, fixedTable.op, a * b)
+            Operation.ADDITION -> Question(a, b, fixedTable.op, a + b)
         }
     }
 

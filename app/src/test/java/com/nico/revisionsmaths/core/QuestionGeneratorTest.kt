@@ -1,5 +1,6 @@
 package com.nico.revisionsmaths.core
 
+import com.nico.revisionsmaths.data.model.FixedTable
 import com.nico.revisionsmaths.data.model.Operation
 import com.nico.revisionsmaths.data.model.OperationType
 import org.junit.Assert.assertEquals
@@ -30,12 +31,50 @@ class QuestionGeneratorTest {
     }
 
     @Test
-    fun `addition pour 7 ans reste sous ou egale a 20`() {
+    fun `addition pour 7 ans reste sous ou egale a 20 sans operande nul`() {
         repeat(100) {
             val q = QuestionGenerator.generateQuestion(7, Operation.ADDITION)
             assertEquals(q.a + q.b, q.answer)
             assertTrue(q.answer <= 20)
+            assertTrue("a=${q.a}", q.a >= 1)
+            assertTrue("b=${q.b}", q.b >= 1)
         }
+    }
+
+    @Test
+    fun `table fixe de multiplication des 8 reste dans la table des 8`() {
+        val fixed = FixedTable(Operation.MULTIPLICATION, 8)
+        repeat(50) {
+            val q = QuestionGenerator.questionForTable(fixed)
+            assertEquals(8, q.a)
+            assertTrue(q.b in 1..10)
+            assertEquals(q.a * q.b, q.answer)
+        }
+        val questions = QuestionGenerator.generateForTable(fixed, 15)
+        assertEquals(15, questions.size)
+        assertTrue(questions.all { it.a == 8 && it.op == Operation.MULTIPLICATION })
+    }
+
+    @Test
+    fun `table fixe d addition des 7 reste dans la table des 7`() {
+        val fixed = FixedTable(Operation.ADDITION, 7)
+        repeat(50) {
+            val q = QuestionGenerator.questionForTable(fixed)
+            assertEquals(7, q.a)
+            assertTrue(q.b in 1..10)
+            assertEquals(q.a + q.b, q.answer)
+        }
+    }
+
+    @Test
+    fun `encodage et decodage de table fixe`() {
+        val fixed = FixedTable(Operation.MULTIPLICATION, 8)
+        assertEquals("M8", fixed.encode())
+        assertEquals(fixed, FixedTable.decode("M8"))
+        assertEquals(FixedTable(Operation.ADDITION, 3), FixedTable.decode("A3"))
+        assertEquals(null, FixedTable.decode("-"))
+        assertEquals(null, FixedTable.decode(null))
+        assertEquals(null, FixedTable.decode("M99"))
     }
 
     @Test

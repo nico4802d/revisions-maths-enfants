@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nico.revisionsmaths.data.model.FixedTable
 import com.nico.revisionsmaths.data.model.OperationType
 import com.nico.revisionsmaths.data.model.QuizConfig
 import com.nico.revisionsmaths.ui.screens.CreateProfileScreen
@@ -21,13 +22,18 @@ object Routes {
     const val HOME = "home"
     const val CREATE_PROFILE = "createProfile"
     const val CONFIG = "config/{profileId}"
-    const val QUIZ = "quiz/{profileId}/{operationType}/{questionCount}"
+    const val QUIZ = "quiz/{profileId}/{operationType}/{questionCount}/{fixedTable}"
     const val RESULTS = "results/{profileId}"
     const val HISTORY = "history/{profileId}"
     const val SETTINGS = "settings"
 
     fun config(profileId: Long) = "config/$profileId"
-    fun quiz(profileId: Long, type: OperationType, count: Int) = "quiz/$profileId/${type.name}/$count"
+    fun quiz(
+        profileId: Long,
+        type: OperationType,
+        count: Int,
+        fixedTable: FixedTable? = null
+    ): String = "quiz/$profileId/${type.name}/$count/${fixedTable?.encode() ?: "-"}"
     fun results(profileId: Long) = "results/$profileId"
     fun history(profileId: Long) = "history/$profileId"
 }
@@ -49,7 +55,8 @@ fun AppNavigation() {
             arguments = listOf(
                 navArgument("profileId") { type = NavType.LongType },
                 navArgument("operationType") { type = NavType.StringType },
-                navArgument("questionCount") { type = NavType.IntType }
+                navArgument("questionCount") { type = NavType.IntType },
+                navArgument("fixedTable") { type = NavType.StringType }
             )
         ) { entry ->
             QuizScreen(
@@ -57,7 +64,8 @@ fun AppNavigation() {
                 entry.arguments?.getLong("profileId") ?: 0L,
                 QuizConfig(
                     OperationType.fromName(entry.arguments?.getString("operationType") ?: "MIXED"),
-                    entry.arguments?.getInt("questionCount") ?: 10
+                    entry.arguments?.getInt("questionCount") ?: 10,
+                    FixedTable.decode(entry.arguments?.getString("fixedTable"))
                 )
             )
         }

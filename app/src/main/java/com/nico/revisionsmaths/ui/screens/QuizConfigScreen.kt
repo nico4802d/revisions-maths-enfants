@@ -30,18 +30,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.nico.revisionsmaths.RevisionsApp
 import com.nico.revisionsmaths.core.QuestionGenerator
 import com.nico.revisionsmaths.data.db.Profile
+import com.nico.revisionsmaths.data.model.FixedTable
+import com.nico.revisionsmaths.data.model.Operation
 import com.nico.revisionsmaths.data.model.OperationType
 import com.nico.revisionsmaths.ui.nav.Routes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private val QUESTION_COUNTS = listOf(5, 10, 15, 20)
+private val TABLES = (1..10).toList()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +59,7 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
 
     var operationType by remember { mutableStateOf(OperationType.MIXED) }
     var questionCount by remember { mutableIntStateOf(10) }
+    var fixedTable by remember { mutableStateOf<FixedTable?>(null) }
 
     val currentProfile = profile
 
@@ -63,8 +69,8 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                 title = { Text("⚙️ Quiz — ${currentProfile?.name ?: ""}") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = androidx.compose.ui.graphics.Color.White,
-                    navigationIconContentColor = androidx.compose.ui.graphics.Color.White
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
                 ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -86,16 +92,73 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Column {
-                    Text("Type d'opération", style = MaterialTheme.typography.titleMedium)
+                    Text("Type de révision", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OperationType.entries.forEach { type ->
                             FilterChip(
-                                selected = operationType == type,
-                                onClick = { operationType = type },
+                                selected = fixedTable == null && operationType == type,
+                                onClick = {
+                                    operationType = type
+                                    fixedTable = null
+                                },
                                 label = { Text(type.label) }
                             )
                         }
+                    }
+                }
+
+                Column {
+                    Text(
+                        "Ou réviser une table précise 📌",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = fixedTable?.op == Operation.MULTIPLICATION,
+                            onClick = {
+                                fixedTable = FixedTable(
+                                    Operation.MULTIPLICATION,
+                                    fixedTable?.table ?: 8
+                                )
+                            },
+                            label = { Text("× Multiplication") }
+                        )
+                        FilterChip(
+                            selected = fixedTable?.op == Operation.ADDITION,
+                            onClick = {
+                                fixedTable = FixedTable(
+                                    Operation.ADDITION,
+                                    fixedTable?.table ?: 8
+                                )
+                            },
+                            label = { Text("＋ Addition") }
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TABLES.forEach { table ->
+                            FilterChip(
+                                selected = fixedTable?.table == table,
+                                onClick = {
+                                    fixedTable = FixedTable(
+                                        fixedTable?.op ?: Operation.MULTIPLICATION,
+                                        table
+                                    )
+                                },
+                                label = { Text("$table") }
+                            )
+                        }
+                    }
+                    if (fixedTable != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Toutes les questions seront dans la ${fixedTable!!.description()}.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
@@ -115,12 +178,18 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
 
                 Column {
                     Text(
-                        "Difficulté adaptée (${currentProfile.age} ans)",
+                        if (fixedTable != null) "Mode table fixe"
+                        else "Difficulté adaptée (${currentProfile.age} ans)",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        QuestionGenerator.difficultyHint(currentProfile.age),
+                        if (fixedTable != null) {
+                            "Tirage aléatoire uniquement dans la table choisie, " +
+                                "pour une révision ciblée."
+                        } else {
+                            QuestionGenerator.difficultyHint(currentProfile.age)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -131,7 +200,7 @@ fun QuizConfigScreen(navController: NavHostController, profileId: Long) {
                 Button(
                     onClick = {
                         navController.navigate(
-                            Routes.quiz(currentProfile.id, operationType, questionCount)
+                            Routes.quiz(currentProfile.id, operationType, questionCount, fixedTable)
                         )
                     },
                     modifier = Modifier.fillMaxWidth()

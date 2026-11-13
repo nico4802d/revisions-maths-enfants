@@ -69,7 +69,9 @@ class QuizViewModel(
     }
 
     private fun start() {
-        questions = QuestionGenerator.generate(profile.age, config.operationType, config.questionCount)
+        questions = config.fixedTable?.let {
+            QuestionGenerator.generateForTable(it, config.questionCount)
+        } ?: QuestionGenerator.generate(profile.age, config.operationType, config.questionCount)
         startTime = System.currentTimeMillis()
         askCurrent()
     }
