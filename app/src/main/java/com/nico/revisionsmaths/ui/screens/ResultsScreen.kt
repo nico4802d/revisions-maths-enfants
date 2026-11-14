@@ -99,8 +99,8 @@ fun ResultsScreen(navController: NavHostController, profileId: Long) {
                         fontSize = 28.sp
                     )
                     Text(
-                        "Quelle belle note ! Petite surprise : tu es officiellement
-                        un champion des maths aujourd'hui !",
+                        "Quelle belle note ! Petite surprise : tu es officiellement " +
+                            "un champion des maths aujourd'hui !",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
