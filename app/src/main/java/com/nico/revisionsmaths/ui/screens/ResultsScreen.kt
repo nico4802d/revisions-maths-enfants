@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavHostController
 import com.nico.revisionsmaths.RevisionsApp
 import com.nico.revisionsmaths.data.db.Profile
@@ -75,6 +76,7 @@ fun ResultsScreen(navController: NavHostController, profileId: Long) {
             val percentage = if (result.totalQuestions > 0) {
                 result.correctCount * 100 / result.totalQuestions
             } else 0
+            val isGreatScore = percentage >= 80
 
             Column(
                 modifier = Modifier
@@ -84,16 +86,37 @@ fun ResultsScreen(navController: NavHostController, profileId: Long) {
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    Icons.Default.EmojiEvents,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.height(64.dp)
-                )
-                Text(
-                    "Bien joué ${profile.name} !",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+                if (isGreatScore) {
+                    Text("🎊 🎉 🎊", fontSize = 40.sp)
+                    Text(
+                        "Félicitations ${profile.name} !",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                    Text(
+                        "⭐ ⭐ ⭐ ⭐ ⭐",
+                        fontSize = 28.sp
+                    )
+                    Text(
+                        "Quelle belle note ! Petite surprise : tu es officiellement
+                        un champion des maths aujourd'hui !",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.height(64.dp)
+                    )
+                    Text(
+                        "Bien joué ${profile.name} !",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
                 Text(
                     "${result.correctCount} / ${result.totalQuestions}",
                     fontSize = 56.sp,

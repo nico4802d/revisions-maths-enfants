@@ -45,8 +45,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -57,6 +59,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.ceil
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -184,6 +187,27 @@ private fun QuizContent(
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding()
+                .drawBehind {
+                    drawRect(Color(0xFFFFFEF4))
+                    val lineSpacing = 40.dp.toPx()
+                    val lineCount = ceil(size.height / lineSpacing).toInt()
+                    for (i in 1..lineCount) {
+                        val y = i * lineSpacing
+                        drawLine(
+                            color = Color(0xFFBBDEFB),
+                            start = Offset(0f, y),
+                            end = Offset(size.width, y),
+                            strokeWidth = 1.5.dp.toPx()
+                        )
+                    }
+                    val marginX = 44.dp.toPx()
+                    drawLine(
+                        color = Color(0xFFEF9A9A),
+                        start = Offset(marginX, 0f),
+                        end = Offset(marginX, size.height),
+                        strokeWidth = 2.dp.toPx()
+                    )
+                }
                 .padding(horizontal = 14.dp, vertical = 10.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)

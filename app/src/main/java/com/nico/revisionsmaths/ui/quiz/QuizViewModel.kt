@@ -231,10 +231,12 @@ class QuizViewModel(
                 AssistantPrompts.systemPromptTyped(profile.age, question, isCorrect),
                 if (isCorrect) "L'enfant a donné la bonne réponse." else "L'enfant a donné une mauvaise réponse."
             )
-            if (!reply.isNullOrBlank()) return reply
+            if (!reply.isNullOrBlank()) {
+                return AssistantPrompts.sanitizeForSpeech(reply)
+            }
         }
         return if (isCorrect) AssistantPrompts.correctFallbacks.random()
-        else AssistantPrompts.incorrectFallback
+        else AssistantPrompts.incorrectFallbacks.random()
     }
 
     private suspend fun speak(text: String) {
