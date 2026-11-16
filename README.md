@@ -16,12 +16,16 @@ propulsé par une IA (OpenAI ou Mistral AI).
   - 8 ans : additions jusqu'à 100, tables 2 à 9
   - ≥ 9 ans : additions à deux chiffres, tables 2 à 10
 - **Types de quiz** : addition, multiplication ou **mixte**, 5 à 20 questions.
-- **Conversation vocale complète** (fonctionne **sans IA ni clé API**) :
-  - questions posées à voix haute (TTS natif Android),
-  - réponses de l'enfant captées au micro (reconnaissance vocale native),
+- **Questions et feedbacks à voix haute** (fonctionne **sans IA ni clé API**,
+  via la synthèse vocale native Android) :
+  - la question est posée oralement, l'enfant répond **au clavier** (activé par
+    défaut dès la fin de la question),
+  - l'assistant lit ensuite l'encouragement ou la correction à voix haute,
   - vérification **toujours locale** (l'IA ne juge jamais la justesse),
   - parseur de nombres français (« quatre-vingt-dix-neuf » → 99).
-- **Saisie tactile toujours disponible** en parallèle du micro.
+- **Temps de réponse réglable** (défaut 10 s, de 5 à 60 s) dans les réglages.
+- (La capture de réponse au micro a été retirée de la v1 : trop instable sur
+  certains appareils ; elle pourra revenir dans une version ultérieure.)
 - **Assistant IA optionnel** (OpenAI ou Mistral AI) : feedbacks personnalisés générés
   à partir d'un pré-prompt strict (jamais donner la réponse, encourager, phrases courtes).
   En cas d'absence, de lenteur ou d'échec de l'IA : repli immédiat sur les feedbacks
@@ -39,8 +43,7 @@ app/src/main/java/com/nico/revisionsmaths/
 ├── voice/
 │   ├── AiClient          API chat-completions multi-fournisseurs + TTS OpenAI
 │   ├── AssistantPrompts  Pré-prompt système (règles strictes, verdict local)
-│   ├── VoiceController   Reconnaissance vocale native Android (STT)
-│   ├── NativeTts         Synthèse vocale native Android (secours par défaut)
+│   ├── NativeTts         Synthèse vocale native Android (voix par défaut)
 │   └── AudioPlayer       Lecture des MP3 renvoyés par le TTS OpenAI
 └── ui/          Jetpack Compose : accueil, profils, config, quiz, résultats,
                  historique, réglages + ViewModels
@@ -51,10 +54,10 @@ L'IA ne fait qu'animer la conversation à partir du verdict transmis dans le pr�
 
 ## Build de l'APK
 
-### Via GitHub Actions (recommandé)
-1. Poussez le code ou lancez `Build APK` depuis l'onglet **Actions** du dépôt.
-2. À la fin du workflow, téléchargez l'artifact `revisions-maths-debug-apk`.
-3. Le fichier `app-debug.apk` est installable directement sur le téléphone
+### Via GitHub Releases (recommandé)
+1. Poussez le code : le workflow « Build APK » compile et publie automatiquement l'APK.
+2. Onglet **Releases** du dépôt → release **APK debug (dernier build)** → `app-debug.apk`.
+3. Le fichier est installable directement sur le téléphone
    (autoriser « Installer des applications inconnues » dans les réglages Android).
 
 ### En local
