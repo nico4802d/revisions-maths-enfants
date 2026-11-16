@@ -2,6 +2,8 @@ name: Build APK
 
 on:
   push:
+    branches: ['**']
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -35,8 +37,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create latest-debug --prerelease \
-            --title "APK debug (dernier build)" \
-            --notes "APK debug généré automatiquement par le dernier push. À installer directement sur le téléphone (autoriser les sources inconnues)." \
-            || true
-          gh release upload latest-debug app/build/outputs/apk/debug/app-debug.apk --clobber
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/debug/app-debug.apk \
+              --title "Révisions Maths $GITHUB_REF_NAME" \
+              --notes "APK debug de la version $GITHUB_REF_NAME. Voir CHANGELOG.md pour le détail des évolutions. Installation directe sur le téléphone (autoriser les sources inconnues)."
+          else
+            gh release create latest-debug --prerelease \
+              --title "APK debug (dernier build)" \
+              --notes "APK debug généré automatiquement par le dernier push. À installer directement sur le téléphone (autoriser les sources inconnues)." \
+              || true
+            gh release upload latest-debug app/build/outputs/apk/debug/app-debug.apk --clobber
+          fi
