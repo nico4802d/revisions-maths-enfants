@@ -1,5 +1,9 @@
 # Révisions Maths Enfants
 
+[![Licence : MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Build APK](https://github.com/nico4802d/revisions-maths-enfants/actions/workflows/build-apk.yml/badge.svg)](https://github.com/nico4802d/revisions-maths-enfants/actions/workflows/build-apk.yml)
+[![Release](https://img.shields.io/badge/version-0.5.0-green.svg)](https://github.com/nico4802d/revisions-maths-enfants/releases)
+
 Application Android (installation directe par APK, sans Play Store) pour réviser les
 **tables d'addition** et de **multiplication**, avec un **assistant vocal** optionnel
 propulsé par une IA (OpenAI ou Mistral AI).
