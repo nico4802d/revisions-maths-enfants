@@ -64,18 +64,22 @@ class AiClient(private val settingsStore: SettingsStore) {
         return JSONObject(text)
     }
 
-    private fun postForBytes(url: String, apiKey: String, body: JSONObject): ByteArray {
-        val conn = open(url, apiKey, body)
-        val bytes = conn.inputStream.readBytes()
-        conn.disconnect()
-        return bytes
-    }
-
     private fun post(url: String, apiKey: String, body: JSONObject): String {
         val conn = open(url, apiKey, body)
-        val text = conn.inputStream.bufferedReader().use { it.readText() }
-        conn.disconnect()
-        return text
+        return try {
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    private fun postForBytes(url: String, apiKey: String, body: JSONObject): ByteArray {
+        val conn = open(url, apiKey, body)
+        return try {
+            conn.inputStream.readBytes()
+        } finally {
+            conn.disconnect()
+        }
     }
 
     private fun open(url: String, apiKey: String, body: JSONObject): HttpURLConnection {
@@ -87,11 +91,17 @@ class AiClient(private val settingsStore: SettingsStore) {
             readTimeout = 12_000
             doOutput = true
         }
-        conn.outputStream.use { it.write(body.toString().toByteArray()) }
-        val code = conn.responseCode
-        if (code != HttpURLConnection.HTTP_OK) {
+        try {
+            conn.outputStream.use { it.write(body.toString().toByteArray()) }
+            val code = conn.responseCode
+            if (code != HttpURLConnection.HTTP_OK) {
+                // Vidage du corps d'erreur pour libérer proprement la connexion.
+                runCatching { conn.errorStream?.bufferedReader()?.use { it.readText() } }
+                throw IOException("HTTP $code")
+            }
+        } catch (e: IOException) {
             conn.disconnect()
-            throw IOException("HTTP $code")
+            throw e
         }
         return conn
     }

@@ -45,4 +45,20 @@ data class QuizConfig(
     val operationType: OperationType,
     val questionCount: Int,
     val fixedTable: FixedTable? = null
-)
+) {
+    /** Libellé stable du type de quiz, persisté dans l'historique. */
+    fun quizTypeLabel(): String = fixedTable?.let {
+        "TABLE_${it.op.name}_${it.table}"
+    } ?: operationType.name
+
+    companion object {
+        /** Reconvertit un libellé persisté en texte affichable. */
+        fun displayLabel(raw: String): String = when {
+            raw.startsWith("TABLE_MULTIPLICATION_") ->
+                "Table de ×${raw.removePrefix("TABLE_MULTIPLICATION_")}"
+            raw.startsWith("TABLE_ADDITION_") ->
+                "Table de +${raw.removePrefix("TABLE_ADDITION_")}"
+            else -> OperationType.fromName(raw).label
+        }
+    }
+}

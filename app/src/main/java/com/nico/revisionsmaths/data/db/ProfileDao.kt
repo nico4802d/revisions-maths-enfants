@@ -22,6 +22,10 @@ interface ProfileDao {
     @Update
     suspend fun update(profile: Profile)
 
+    /** Incrément atomique d'XP : évite les écritures perdues en cas de mise à jour concurrente. */
+    @Query("UPDATE profiles SET xp = xp + :delta WHERE id = :id")
+    suspend fun addXp(id: Long, delta: Int)
+
     @Delete
     suspend fun delete(profile: Profile)
 }

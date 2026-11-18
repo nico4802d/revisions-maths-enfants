@@ -261,12 +261,12 @@ class QuizViewModel(
                 }
             }.sum()
             val durationSeconds = ((System.currentTimeMillis() - startTime) / 1000).toInt()
-            container.database.profileDao().update(profile.copy(xp = profile.xp + xpGained))
+            container.database.profileDao().addXp(profile.id, xpGained)
             container.database.quizResultDao().insert(
                 QuizResult(
                     profileId = profile.id,
                     date = System.currentTimeMillis(),
-                    operationType = config.operationType.name,
+                    operationType = config.quizTypeLabel(),
                     totalQuestions = questions.size,
                     correctCount = current.score,
                     durationSeconds = durationSeconds,

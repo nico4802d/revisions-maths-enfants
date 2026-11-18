@@ -34,7 +34,12 @@ class NativeTts(context: Context) : TextToSpeech.OnInitListener {
     suspend fun speak(text: String) {
         val tts = engine ?: return
         if (!ready) {
-            delay(1500)
+            // Le moteur TTS peut être lent à s'initialiser : on attend jusqu'à 4 s
+            // en petits pas avant d'abandonner (le message serait sinon ignoré).
+            repeat(8) {
+                if (ready) return@repeat
+                delay(500)
+            }
             if (!ready) return
         }
         suspendCancellableCoroutine { continuation ->

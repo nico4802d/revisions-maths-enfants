@@ -34,7 +34,7 @@ import androidx.navigation.NavHostController
 import com.nico.revisionsmaths.RevisionsApp
 import com.nico.revisionsmaths.data.db.Profile
 import com.nico.revisionsmaths.data.db.QuizResult
-import com.nico.revisionsmaths.data.model.OperationType
+import com.nico.revisionsmaths.data.model.QuizConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -108,7 +108,7 @@ fun HistoryScreen(navController: NavHostController, profileId: Long) {
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    OperationType.fromName(result.operationType).label,
+                                    QuizConfig.displayLabel(result.operationType),
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.weight(1f)
                                 )

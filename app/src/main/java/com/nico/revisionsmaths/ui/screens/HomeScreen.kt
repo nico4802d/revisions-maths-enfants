@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -32,11 +33,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,6 +61,7 @@ import com.nico.revisionsmaths.ui.theme.ProfileCardColors
 fun HomeScreen(navController: NavHostController) {
     val viewModel: ProfilesViewModel = viewModel()
     val profiles by viewModel.profiles.collectAsState()
+    var profilePendingDelete by remember { mutableStateOf<Profile?>(null) }
 
     Scaffold(
         topBar = {
@@ -116,12 +122,38 @@ fun HomeScreen(navController: NavHostController) {
                         avatar = ProfileAvatars[index % ProfileAvatars.size],
                         onQuiz = { navController.navigate(Routes.config(profile.id)) },
                         onHistory = { navController.navigate(Routes.history(profile.id)) },
-                        onDelete = { viewModel.deleteProfile(profile) }
+                        onDelete = { profilePendingDelete = profile }
                     )
                 }
                 item { Spacer(Modifier.height(88.dp)) }
             }
         }
+    }
+
+    profilePendingDelete?.let { profile ->
+        AlertDialog(
+            onDismissRequest = { profilePendingDelete = null },
+            title = { Text("Supprimer ${profile.name} ?") },
+            text = {
+                Text(
+                    "Le profil, son niveau (${profile.xp} XP) et tout son historique " +
+                        "de quiz seront définitivement supprimés."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteProfile(profile)
+                    profilePendingDelete = null
+                }) {
+                    Text("Supprimer", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { profilePendingDelete = null }) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 }
 
